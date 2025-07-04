@@ -1,7 +1,7 @@
-const name = '마라톤 정보 사이트'
+const name = '말아톤 262'
 const slogan = '당신의 마라톤 여정을 위한 완벽한 가이드'
-const copyright = '© 2025 마라톤 정보 사이트. All rights reserved.'
-const site = 'https://marathon999.com'
+const copyright = '© 2025 marathon262. All rights reserved.'
+const site = 'https://marathon262.com'
 const description =
   '국내외 마라톤 대회 정보, 코스 정보, 참가 신청, 마라톤 팁과 가이드를 제공하는 종합 마라톤 정보 사이트입니다. 초보자부터 전문가까지 모든 러너를 위한 완벽한 마라톤 가이드.'
 const keywords =

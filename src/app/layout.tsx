@@ -4,6 +4,7 @@ import localFont from 'next/font/local'
 import { Poppins } from 'next/font/google'
 import { ThemeProvider } from 'next-themes'
 import { Toaster } from 'sonner'
+import { AuthProvider } from '@/contexts/context-auth'
 import {
   APP_DESCRIPTION,
   APP_KEYWORDS,
@@ -170,7 +171,9 @@ export default function RootLayout({
             },
           }}
         />
-        <ThemeProvider attribute='class'>{children}</ThemeProvider>
+        <ThemeProvider attribute='class'>
+          <AuthProvider>{children}</AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   )

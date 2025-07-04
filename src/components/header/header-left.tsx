@@ -1,5 +1,6 @@
-import Link from 'next/link'
 import React from 'react'
+import Link from 'next/link'
+import { APP_NAME } from '@/lib/constants'
 
 export default function HeaderLeft() {
   return (
@@ -7,7 +8,7 @@ export default function HeaderLeft() {
       href={'/'}
       className='font-gmarket text-2xl font-bold text-blue-700 pt-1 block'
     >
-      말아톤 999
+      {APP_NAME}
     </Link>
   )
 }
