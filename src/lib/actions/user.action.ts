@@ -18,16 +18,17 @@ import { signIn, signOut } from '@/auth'
 import { generateVerificationCode } from '../utils'
 import { sendVerificationEmail } from '@/email/send-email-verification'
 import { sendAdminNotification } from '@/email/send-admin-notification'
+import { revalidatePath } from 'next/cache'
 
-// 회원가입 1단계: 이메일 인증 코드 발송 : initiateSignup
-// 회원가입 2단계: 인증 코드 확인 : verifySignup
-// 회원가입 3단계: 회원가입 완료 : completeSignup
-// 로그인 : signInWithCredentials
-// 로그아웃 : SignOut
-// 이메일 찾기 : checkEmailExists
-// 비밀번호 찾기 1단계 : 이메일 확인 및 발송
-// 비밀번호 찾기 2단계 : 인증번호 확인
-// 비밀번호 찾기 3단계 : 비밀번호 재설정
+// 1. initiateSignup : 회원가입 1단계 : 이메일 인증 코드 발송
+// 2. verifySignup : 회원가입 2단계 : 인증 코드 확인
+// 3. completeSignup : 회원가입 3단계 : 회원가입 완료
+// 4. signInWithCredentials : 로그인
+// 5. SignOut : 로그아웃
+// 6. checkEmailExists 이메일 찾기
+// 7. 비밀번호 찾기 1단계 : 이메일 확인 및 발송
+// 8. 비밀번호 찾기 2단계 : 인증번호 확인
+// 9. 비밀번호 찾기 3단계 : 비밀번호 재설정
 
 // 회원가입 1단계: 이메일 인증 코드 발송
 export async function initiateSignup(data: IEmailOnlyInput) {
@@ -248,5 +249,246 @@ export const SignOut = async () => {
   } catch (error) {
     console.error('로그아웃 오류:', error)
     return { success: false, error: '로그아웃 중 오류가 발생했습니다.' }
+  }
+}
+
+// 1. getAllUsers : 모든 회원 가져오기
+// 2. getAllUsersPage : 모든 회원 가져오기(페이지, 검색)
+// 3. deleteUser : 회원 삭제
+// 4. toggleUserStatus : 회원 활성화/비활성화 토글
+// 5. toggleUserRole : 회원 역할(사용자/관리자) 토글
+
+// 모든 회원 가져오기
+export async function getAllUsers() {
+  try {
+    // 데이터베이스 연결
+    await connectToDatabase()
+
+    // 모든 사용자 조회
+    const users = await User.find().sort({ createdAt: -1 }).lean()
+
+    // JSON 직렬화
+    const serialized = JSON.parse(JSON.stringify(users))
+
+    return {
+      success: true,
+      users: serialized,
+    }
+  } catch (error) {
+    console.error('사용자 목록 조회 중 오류 발생:', error)
+
+    return {
+      success: false,
+      error: '사용자 목록을 불러오는 중 오류가 발생했습니다.',
+    }
+  }
+}
+
+// 모든 회원 가져오기(페이지, 검색)
+export async function getAllUsersPage(
+  page = 1,
+  limit = 10,
+  searchQuery?: string
+) {
+  try {
+    await connectToDatabase()
+
+    const skip = (page - 1) * limit
+
+    // 검색 조건 설정
+    const searchCondition = searchQuery
+      ? {
+          $or: [
+            { name: { $regex: searchQuery, $options: 'i' } },
+            { email: { $regex: searchQuery, $options: 'i' } },
+            { role: { $regex: searchQuery, $options: 'i' } },
+          ],
+        }
+      : {}
+
+    // 총 개수 조회
+    const totalCount = await User.countDocuments(searchCondition)
+
+    // 페이지네이션된 데이터 조회
+    const users = await User.find(searchCondition)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean()
+
+    // 페이지네이션 정보 계산
+    const totalPages = Math.ceil(totalCount / limit)
+    const hasNextPage = page < totalPages
+    const hasPrevPage = page > 1
+
+    return {
+      success: true,
+      users: JSON.parse(JSON.stringify(users)),
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalCount,
+        limit,
+        hasNextPage,
+        hasPrevPage,
+      },
+    }
+  } catch (error) {
+    console.error('사용자 조회 오류:', error)
+    return {
+      success: false,
+      error: '사용자 데이터를 불러오는데 실패했습니다.',
+    }
+  }
+}
+
+// 회원 삭제
+export async function deleteUser(userId: string) {
+  try {
+    // 데이터베이스 연결
+    await connectToDatabase()
+
+    // 사용자 ID 유효성 검사
+    if (!userId) {
+      return {
+        success: false,
+        error: '삭제할 사용자 ID가 필요합니다.',
+      }
+    }
+
+    // 사용자 존재 확인
+    const existingUser = await User.findById(userId)
+    if (!existingUser) {
+      return {
+        success: false,
+        error: '삭제하려는 사용자를 찾을 수 없습니다.',
+      }
+    }
+
+    // 사용자 삭제
+    await User.findByIdAndDelete(userId)
+
+    // 캐시 갱신
+    revalidatePath('/')
+
+    return {
+      success: true,
+      message: '사용자가 성공적으로 삭제되었습니다.!',
+    }
+  } catch (error) {
+    console.error('사용자 삭제 중 오류 발생:', error)
+
+    return {
+      success: false,
+      error: '사용자 삭제 중 오류가 발생했습니다.',
+    }
+  }
+}
+
+// 회원 활성화/비활성화 토글
+export async function toggleUserStatus(userId: string) {
+  try {
+    // 데이터베이스 연결
+    await connectToDatabase()
+
+    // 사용자 ID 유효성 검사
+    if (!userId) {
+      return {
+        success: false,
+        error: '사용자 ID가 필요합니다.',
+      }
+    }
+
+    // 사용자 존재 확인
+    const existingUser = await User.findById(userId)
+    if (!existingUser) {
+      return {
+        success: false,
+        error: '사용자를 찾을 수 없습니다.',
+      }
+    }
+
+    // 활성화 상태 토글 (isActive 필드가 있다고 가정)
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      {
+        isActive: !existingUser.isActive,
+        updatedAt: new Date(),
+      },
+      { new: true }
+    )
+
+    // 캐시 갱신
+    revalidatePath('/')
+
+    return {
+      success: true,
+      message: `사용자가 ${
+        updatedUser?.isActive ? '활성화' : '비활성화'
+      }되었습니다.`,
+      isActive: updatedUser?.isActive,
+    }
+  } catch (error) {
+    console.error('사용자 상태 변경 중 오류 발생:', error)
+
+    return {
+      success: false,
+      error: '사용자 상태 변경 중 오류가 발생했습니다.',
+    }
+  }
+}
+
+// 회원 역할(사용자/관리자) 토글
+export async function toggleUserRole(userId: string) {
+  try {
+    // 데이터베이스 연결
+    await connectToDatabase()
+
+    // 사용자 ID 유효성 검사
+    if (!userId) {
+      return {
+        success: false,
+        error: '사용자 ID가 필요합니다.',
+      }
+    }
+
+    // 사용자 존재 확인
+    const existingUser = await User.findById(userId)
+    if (!existingUser) {
+      return {
+        success: false,
+        error: '사용자를 찾을 수 없습니다.',
+      }
+    }
+
+    // 역할 토글 (admin ↔ user)
+    const newRole = existingUser.role === 'admin' ? 'user' : 'admin'
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      {
+        role: newRole,
+        updatedAt: new Date(),
+      },
+      { new: true }
+    )
+
+    // 캐시 갱신
+    revalidatePath('/')
+
+    return {
+      success: true,
+      message: `사용자 역할이 ${
+        newRole === 'admin' ? '관리자' : '일반 사용자'
+      }로 변경되었습니다.`,
+      role: updatedUser?.role,
+    }
+  } catch (error) {
+    console.error('사용자 역할 변경 중 오류 발생:', error)
+
+    return {
+      success: false,
+      error: '사용자 역할 변경 중 오류가 발생했습니다.',
+    }
   }
 }

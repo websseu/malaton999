@@ -55,7 +55,7 @@ export async function createContact(formData: IContactInput) {
   }
 }
 
-// 모든 문의사항 가져오기(관리자용)
+// 문의사항 가져오기
 export async function getAllContacts() {
   try {
     // 데이터베이스 연결
@@ -81,7 +81,7 @@ export async function getAllContacts() {
   }
 }
 
-// 페이지네이션을 지원하는 문의사항 조회 (관리자용)
+// 문의사항 가져오기(페이지, 검색)
 export async function getAllContactsPage(
   page = 1,
   limit = 10,
@@ -166,7 +166,7 @@ export async function deleteContact(contactId: string) {
     await Contact.findByIdAndDelete(contactId)
 
     // 캐시 갱신
-    revalidatePath('/admin')
+    revalidatePath('/')
 
     return {
       success: true,
