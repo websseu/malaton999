@@ -20,3 +20,19 @@ export function formatDateTime(dateInput: Date | string): string {
   const mm = String(d.getMinutes()).padStart(2, '0')
   return `${yyyy}.${MM}.${dd} ${hh}:${mm}`
 }
+
+// 디데이 계산
+export const getDday = (date: string) => {
+  const today = new Date()
+  const eventDate = new Date(date)
+  const diffTime = eventDate.getTime() - today.getTime()
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+
+  if (diffDays > 0) {
+    return `D-${diffDays}`
+  } else if (diffDays === 0) {
+    return 'D-Day'
+  } else {
+    return `D+${Math.abs(diffDays)}`
+  }
+}

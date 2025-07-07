@@ -27,6 +27,7 @@ npx shadcn@latest add badge
 npx shadcn@latest add separator
 npx shadcn@latest add carousel
 npx shadcn@latest add avatar
+npx shadcn@latest add accordion
 
 npm i next-themes
 npm i next-auth@beta
